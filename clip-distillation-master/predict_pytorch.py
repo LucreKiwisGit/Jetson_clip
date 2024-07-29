@@ -30,6 +30,7 @@ import numpy as np
 from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 import open_clip
+import time
 from open_clip.pretrained import _PRETRAINED
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
@@ -87,7 +88,7 @@ if __name__ == "__main__":
     model_name = "ViT-B-32"
     model_teacher, _, preprocess = open_clip.create_model_and_transforms(
         model_name, 
-        pretrained="/home/lucre/Downloads/open_clip_pytorch_model.bin"
+        pretrained="../../PretrainedModel/openclip/ViT-B-32/open_clip_pytorch_model.bin"
     )
 
     model_teacher = model_teacher.to(args.device).eval()
@@ -117,14 +118,19 @@ if __name__ == "__main__":
     with torch.no_grad():
         image_data = transform(image).to(args.device)
 
+        # warmup
+        for i in range(3):
+            output_embedding_distill = model_distill(image_data[None, ...]) 
+            output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
 
+        start_time = time.time()
         output_embedding_distill = model_distill(image_data[None, ...]) 
         probs_distill = embedding_to_probs(
             output_embedding_distill,
             text_embeddings
         )
         probs_distill = probs_distill.detach().cpu().numpy()
-
+        inference_distill_time = time.time() - start_time
 
         output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
         probs_teacher = embedding_to_probs(
@@ -132,6 +138,7 @@ if __name__ == "__main__":
             text_embeddings
         )
         probs_teacher = probs_teacher.detach().cpu().numpy()
+        inference_teacher_time = time.time() - start_time - inference_distill_time
 
     probs_distill = probs_distill.flatten()
     prob_indices_distill = np.argsort(probs_distill)[::-1] # descending
@@ -139,7 +146,7 @@ if __name__ == "__main__":
     probs_teacher = probs_teacher.flatten()
     probs_indices_teacher = np.argsort(probs_teacher)[::-1]
 
-    print(f"Result of {args.model_name}:")
+    print(f"Result of {args.model_name}, it takes {inference_distill_time * 1000.0} ms:")
     if text_prompts is not None:
         for pid in prob_indices_distill:
             print(f"Index {pid} ({100 * round(probs_distill[pid], 3)}%): \"{text_prompts[pid]}\"")
@@ -147,7 +154,7 @@ if __name__ == "__main__":
         for pid in prob_indices_distill:
             print(f"Index {pid} ({100 * round(probs_distill[pid], 3)}%)")
 
-    print(f"Result of ViT-B-32:")
+    print(f"Result of ViT-B-32, it takes {inference_teacher_time * 1000.0} ms:")
     if text_prompts is not None:
         for pid in probs_indices_teacher:
             print(f"Index {pid} ({100 * round(probs_teacher[pid], 3)}%): \"{text_prompts[pid]}\"")
