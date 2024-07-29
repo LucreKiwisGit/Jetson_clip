@@ -166,5 +166,5 @@ if __name__ == "__main__":
 
     from torchinfo import summary
 
-    summary(model_distill)
-    summary(model_teacher)
+    summary(model_distill, input_size=(1, 3, 224, 224))
+    summary(model_teacher, input_size=(1, 3, 224, 224))
