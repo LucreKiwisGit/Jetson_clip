@@ -121,8 +121,7 @@ if __name__ == "__main__":
         # warmup
         for i in range(3):
             output_embedding_distill = model_distill(image_data[None, ...]) 
-            output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
-
+            
         start_time = time.time()
         output_embedding_distill = model_distill(image_data[None, ...]) 
         probs_distill = embedding_to_probs(
@@ -132,6 +131,9 @@ if __name__ == "__main__":
         probs_distill = probs_distill.detach().cpu().numpy()
         inference_distill_time = time.time() - start_time
 
+        for i in range(3):
+            output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
+            
         output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
         probs_teacher = embedding_to_probs(
             output_embedding_teacher,
