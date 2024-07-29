@@ -1,0 +1,22 @@
+{
+  "model_name": "resnet18",
+  "images_folder": "data/images",
+  "embeddings_folder": "data/embeddings",
+  "output_dir": "data/models/resnet18",
+  "image_size": 224,
+  "output_dim": 512,
+  "batch_size": 64,
+  "device": "cuda",
+  "shuffle": true,
+  "num_workers": 8,
+  "num_epochs": 150,
+  "pretrained": true,
+  "lr": 0.0003,
+  "momentum": 0.0,
+  "weight_decay": 0.0,
+  "optimizer": "adam",
+  "criterion": "mse",
+  "use_asp": false,
+  "init_checkpoint": null,
+  "use_qat": false
+}
