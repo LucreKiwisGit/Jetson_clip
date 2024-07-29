@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
         for i in range(3):
             output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
-            
+
         output_embedding_teacher = model_teacher.encode_image(image_data[None, ...])
         probs_teacher = embedding_to_probs(
             output_embedding_teacher,
@@ -163,3 +163,8 @@ if __name__ == "__main__":
     else:
         for pid in probs_indices_teacher:
             print(f"Index {pid} ({100 * round(probs_teacher[pid], 3)}%)")
+
+    from torchinfo import summary
+
+    summary(model_distill)
+    summary(model_teacher)
