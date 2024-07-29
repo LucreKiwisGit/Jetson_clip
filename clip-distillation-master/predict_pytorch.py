@@ -88,7 +88,7 @@ if __name__ == "__main__":
     model_name = "ViT-B-32"
     model_teacher, _, preprocess = open_clip.create_model_and_transforms(
         model_name, 
-        pretrained="../../PretrainedModel/openclip/ViT-B-32/open_clip_pytorch_model.bin"
+        pretrained="../PretrainedModel/openclip/ViT-B-32/open_clip_pytorch_model.bin"
     )
 
     model_teacher = model_teacher.to(args.device).eval()
