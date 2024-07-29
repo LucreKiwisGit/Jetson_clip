@@ -15,7 +15,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 
-include(/usr/include/aarch64-linux-gnu)
+include_directories(/usr/include/aarch64-linux-gnu)
 link_directories(/usr/lib/aarch64-linux-gnu)
 
 include_directories(/usr/include/opencv4)
