@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <chrono>
+#include<opecv2/opencv.hpp>
 
 class Logger : public nvinfer1::ILogger
 {
