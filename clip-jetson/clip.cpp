@@ -3,18 +3,21 @@
 #include <fstream>
 #include <map>
 #include <chrono>
-#include<opecv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
+#include <cnpy.h>
+#include "utils.h"
 
-class Logger : public nvinfer1::ILogger
-{
-    void log(nvinfer1::ILogger::Severity severity, const char* msg) noexcept override
-    {
-        if (severity <= nvinfer1::ILogger::Severity::kWARNING)
-        {
-            std::cout << msg << std::endl;
-        }
-    }
-} gLogger;
+
+// class Logger : public nvinfer1::ILogger
+// {
+//     void log(nvinfer1::ILogger::Severity severity, const char* msg) noexcept override
+//     {
+//         if (severity <= nvinfer1::ILogger::Severity::kWARNING)
+//         {
+//             std::cout << msg << std::endl;
+//         }
+//     }
+// } gLogger;
 
 // 载入模型
 nvinfer1::ICudaEngine* loadModel(const std::string& engineFile, nvinfer1::IRuntime* runtime){
@@ -35,17 +38,13 @@ nvinfer1::ICudaEngine* loadModel(const std::string& engineFile, nvinfer1::IRunti
     return runtime->deserializeCudaEngine(engineData.data(), length, nullptr);
 }
 
-// 图像预处理
-cv::Mat preprocess(const cv::Mat& image, int inputH, int inputW)
-{
-    cv::Mat resizeImage, floatImage;
-    cv::resize(image, resizeImage, cv::Size(inputW, inputH));
-    resizeImage.convertTo(floatImage, CV_32FC3, 1.0 / 255.0);
-    return floatImage;
-}
 
 int main()
 {
+
+    // 清理
+    builder->destroy();
+
     // Load TensorRT runtime
     nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(gLogger);
     if (!runtime)
@@ -78,12 +77,15 @@ int main()
 
     // Allocate memory
     size_t inputSize = 1;
+    size_t image_num = 1;
+    inputDims.d[0] = image_num;
+    outputDims.d[0] = image_num;
     for (int i = 0; i < inputDims.nbDims; ++i)
     {
         inputSize *= inputDims.d[i];
     }
     size_t outputSize = 1;
-    for (int i = 0; i < outputDims.nbDims; ++i)
+    for (int i = 1; i < outputDims.nbDims; ++i)
     {
         outputSize *= outputDims.d[i];
     }
@@ -93,19 +95,41 @@ int main()
     cudaMalloc(&buffer[1], outputSize * sizeof(float));
 
     // Load Image and preprocess
-    cv::Mat image = cv::imread("dog.jpg");
-    cv::Mat preprocessedImage = preprocess(image, inputDims.d[1], inputDims.d[2]);
+    cv::Mat image = cv::imread("test.png");
+    float* pImage = new float[inputSize];
+    preprocess(image, pImage, inputDims.d[2], inputDims.d[3]);
+    cudaMemcpy(buffer[0], pImage, inputSize * sizeof(float), cudaMemcpyHostToDevice);
 
-    cudaMemcpy(buffer[0], preprocessedImage.data, inputSize * sizeof(float), cudaMemcpyHostToDevice);
+    // 开始推理
+    bool status = context->executeV2(buffer);
+    if (!status) {
+        std::cerr << "Inference execution failed." << std::endl;
+        return 0;
+    }
 
-    context->executeV2(buffer);
 
     // 把输出结果复制到CPU内存
-    std::vector<float> embeding(outputSize);
-    cudaMemcpy(output.data(), buffer[1], outputSize * sizeof(float), cudaMemcpyDeviceToHost);
+    std::vector<std::vector<float>> embedding(outputDims.d[0], std::vector<float>(outputSize));
+    cudaMemcpy(embedding.data(), buffer[1], outputSize * sizeof(float), cudaMemcpyDeviceToHost);
 
     // 结果后处理
+    std::vector<std::vector<float>> probs;
+    std::vector<std::vector<float>> text_embedding;
+    cnpy::NpyArray text_embedding_npy = cnpy::npy_load("./data/text_embeddings.npy");
+    text_embedding = npyTo2DVector<float>(text_embedding_npy);
+    probs = embedding_to_probs(embedding, text_embedding);
     
+    // 输出结果
+    save2DNpy("probs.npy", probs);
+    std::vector<std::string> text_prompts = readFileByLines("./data/text_prompts.txt");
+    for (int i = 0; i < probs.size();i++)
+    {
+        printf("The %d 'th result:\n", i);
+        for (int j = 0; j < text_prompts.size();j++)
+        {
+            printf("%s : %f", text_prompts[j], probs[i][j]);
+        }
+    }
 
     // 释放内存
     cudaFree(buffer[0]);

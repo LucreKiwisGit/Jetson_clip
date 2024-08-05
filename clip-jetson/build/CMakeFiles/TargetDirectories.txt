@@ -1,0 +1,3 @@
+/home/lucre/Project/clip/clip-jetson/build/CMakeFiles/rebuild_cache.dir
+/home/lucre/Project/clip/clip-jetson/build/CMakeFiles/edit_cache.dir
+/home/lucre/Project/clip/clip-jetson/build/CMakeFiles/clip.dir
